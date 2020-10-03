@@ -228,7 +228,7 @@ const helpers = {
 let spriteVer;
 
 if (true) {
-  spriteVer = "3.7.25"; // eslint-disable-line no-undef
+  spriteVer = "3.7.27"; // eslint-disable-line no-undef
 } else {}
 
 const version = spriteVer;
@@ -10329,6 +10329,13 @@ function drawMesh2D(mesh, context, enableFilter = true, cloudFill = null, cloudS
   }
 
   context.transform(...mesh.transformMatrix);
+
+  if (mesh.clipPath) {
+    const clipPath = mesh.clipPath;
+    const path = new Path2D(clipPath);
+    context.clip(path);
+  }
+
   const count = mesh.contours.length;
   mesh.contours.forEach((points, i) => {
     // eslint-disable-line complexity
@@ -19346,6 +19353,7 @@ class Node {
   }
 
   addEventListener(type, listener, options = {}) {
+    if (type === 'mousewheel') type = 'wheel';
     if (typeof options === 'boolean') options = {
       capture: options
     };
@@ -19475,7 +19483,8 @@ class Node {
     }
 
     event.target = this;
-    const type = event.type;
+    let type = event.type;
+    if (type === 'mousewheel') type = 'wheel';
     const elements = [this];
     let parent = this.parent;
 
@@ -33788,33 +33797,32 @@ function updateTexture(svgNode, flexible = true) {
   const root = svgNode[_root];
 
   if (root && root.children[0]) {
-    if (flexible && svgNode.attributes.flexible) {
-      const svg = svgNode.svg;
+    const svg = svgNode.svg;
+    const displayRatio = svgNode.layer ? svgNode.layer.displayRatio : 1;
 
-      if (!svg.hasAttribute('data-original-width')) {
-        let w = svg.getAttribute('width');
-        w = w ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_4__["sizeToPixel"])(w) : 300;
-        let h = svg.getAttribute('height');
-        h = h ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_4__["sizeToPixel"])(h) : 150;
+    if (!svg.hasAttribute('data-original-width')) {
+      let w = svg.getAttribute('width');
+      w = w ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_4__["sizeToPixel"])(w) : 300;
+      let h = svg.getAttribute('height');
+      h = h ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_4__["sizeToPixel"])(h) : 150;
 
-        if (!svg.hasAttribute('viewBox')) {
-          svg.setAttribute('viewBox', `0 0 ${Math.round(w)} ${Math.round(h)}`); // svg.setAttribute('width', '100%');
-          // svg.setAttribute('height', '100%');
-        }
-
-        svg.setAttribute('data-original-width', w);
-        svg.setAttribute('data-original-height', h);
+      if (!svg.hasAttribute('viewBox')) {
+        svg.setAttribute('viewBox', `0 0 ${Math.round(w)} ${Math.round(h)}`);
       }
 
-      let width = svgNode.attributes.width || Number(svg.getAttribute('data-original-width'));
-      let height = svgNode.attributes.height || Number(svg.getAttribute('data-original-height')); // let {width, height} = svgNode.getBoundingClientRect();
-      // width = width || w;
-      // height = height || h;
+      svg.setAttribute('data-original-width', w);
+      svg.setAttribute('data-original-height', h);
+    }
 
+    let width = svgNode.attributes.width || Number(svg.getAttribute('data-original-width'));
+    let height = svgNode.attributes.height || Number(svg.getAttribute('data-original-height'));
+    width *= displayRatio;
+    height *= displayRatio;
+
+    if (flexible && svgNode.attributes.flexible) {
       const scale = svgNode.attributes.scale[0];
-      const displayRatio = svgNode.layer ? svgNode.layer.displayRatio : 1;
-      width *= scale * displayRatio;
-      height *= scale * displayRatio;
+      width *= scale;
+      height *= scale;
       svg.setAttribute('width', width);
       svg.setAttribute('height', height);
 
@@ -33825,6 +33833,8 @@ function updateTexture(svgNode, flexible = true) {
         svgNode.attributes.textureRect = [0, 0, Math.round(boxSize[0] * imgWidth / width), Math.round(boxSize[1] * imgHeight / height)];
       }
     } else if (!svgNode[_updateTextureTask]) {
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
       svgNode[_updateTextureTask] = Promise.resolve().then(() => {
         delete svgNode[_updateTextureTask];
         const svgText = root.innerHTML;

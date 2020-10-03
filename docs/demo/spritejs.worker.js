@@ -11742,6 +11742,13 @@ function drawMesh2D(mesh, context) {
   }
 
   context.transform.apply(context, _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0___default()(mesh.transformMatrix));
+
+  if (mesh.clipPath) {
+    var clipPath = mesh.clipPath;
+    var path = new Path2D(clipPath);
+    context.clip(path);
+  }
+
   var count = mesh.contours.length;
   mesh.contours.forEach(function (points, i) {
     // eslint-disable-line complexity
@@ -21358,6 +21365,7 @@ var Node = /*#__PURE__*/function () {
     key: "addEventListener",
     value: function addEventListener(type, listener) {
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+      if (type === 'mousewheel') type = 'wheel';
       if (typeof options === 'boolean') options = {
         capture: options
       };
@@ -21504,6 +21512,7 @@ var Node = /*#__PURE__*/function () {
 
       event.target = this;
       var type = event.type;
+      if (type === 'mousewheel') type = 'wheel';
       var elements = [this];
       var parent = this.parent;
 
@@ -38143,33 +38152,32 @@ function updateTexture(svgNode) {
   var root = svgNode[_root];
 
   if (root && root.children[0]) {
-    if (flexible && svgNode.attributes.flexible) {
-      var svg = svgNode.svg;
+    var svg = svgNode.svg;
+    var displayRatio = svgNode.layer ? svgNode.layer.displayRatio : 1;
 
-      if (!svg.hasAttribute('data-original-width')) {
-        var w = svg.getAttribute('width');
-        w = w ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_14__["sizeToPixel"])(w) : 300;
-        var h = svg.getAttribute('height');
-        h = h ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_14__["sizeToPixel"])(h) : 150;
+    if (!svg.hasAttribute('data-original-width')) {
+      var w = svg.getAttribute('width');
+      w = w ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_14__["sizeToPixel"])(w) : 300;
+      var h = svg.getAttribute('height');
+      h = h ? Object(_utils_attribute_value__WEBPACK_IMPORTED_MODULE_14__["sizeToPixel"])(h) : 150;
 
-        if (!svg.hasAttribute('viewBox')) {
-          svg.setAttribute('viewBox', "0 0 ".concat(Math.round(w), " ").concat(Math.round(h))); // svg.setAttribute('width', '100%');
-          // svg.setAttribute('height', '100%');
-        }
-
-        svg.setAttribute('data-original-width', w);
-        svg.setAttribute('data-original-height', h);
+      if (!svg.hasAttribute('viewBox')) {
+        svg.setAttribute('viewBox', "0 0 ".concat(Math.round(w), " ").concat(Math.round(h)));
       }
 
-      var width = svgNode.attributes.width || Number(svg.getAttribute('data-original-width'));
-      var height = svgNode.attributes.height || Number(svg.getAttribute('data-original-height')); // let {width, height} = svgNode.getBoundingClientRect();
-      // width = width || w;
-      // height = height || h;
+      svg.setAttribute('data-original-width', w);
+      svg.setAttribute('data-original-height', h);
+    }
 
+    var width = svgNode.attributes.width || Number(svg.getAttribute('data-original-width'));
+    var height = svgNode.attributes.height || Number(svg.getAttribute('data-original-height'));
+    width *= displayRatio;
+    height *= displayRatio;
+
+    if (flexible && svgNode.attributes.flexible) {
       var scale = svgNode.attributes.scale[0];
-      var displayRatio = svgNode.layer ? svgNode.layer.displayRatio : 1;
-      width *= scale * displayRatio;
-      height *= scale * displayRatio;
+      width *= scale;
+      height *= scale;
       svg.setAttribute('width', width);
       svg.setAttribute('height', height);
 
@@ -38180,6 +38188,8 @@ function updateTexture(svgNode) {
         svgNode.attributes.textureRect = [0, 0, Math.round(boxSize[0] * imgWidth / width), Math.round(boxSize[1] * imgHeight / height)];
       }
     } else if (!svgNode[_updateTextureTask]) {
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
       svgNode[_updateTextureTask] = Promise.resolve().then(function () {
         delete svgNode[_updateTextureTask];
         var svgText = root.innerHTML;
